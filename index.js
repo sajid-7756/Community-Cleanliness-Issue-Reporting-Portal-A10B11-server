@@ -57,8 +57,28 @@ async function run() {
     });
 
     app.get("/issues", async (req, res) => {
-      const cursor = issueCollection.find();
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        query.email = email;
+      }
+
+      const cursor = issueCollection.find(query);
       const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.patch("/issues/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedIssue = req.body;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          ...updatedIssue,
+        },
+      };
+      const options = {};
+      const result = await issueCollection.updateOne(query, update, options);
       res.send(result);
     });
 
@@ -70,6 +90,7 @@ async function run() {
         category: 1,
         location: 1,
         image: 1,
+        email: 1,
       };
 
       const query = issueCollection
