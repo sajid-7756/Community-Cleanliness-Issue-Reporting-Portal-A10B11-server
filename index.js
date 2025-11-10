@@ -75,6 +75,12 @@ async function run() {
       }
     });
 
+    app.get("/users", async (req, res) => {
+      const cursor = usersCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     //issue related APIs
     app.post("/issues", verifyFirebaseToken, async (req, res) => {
       const newIssue = req.body;
