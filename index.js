@@ -82,12 +82,26 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/issues", async (req, res) => {
-      const { email, category, status } = req.query;
+    app.get("/myIssue", verifyFirebaseToken, async (req, res) => {
+      const { email } = req.query;
+
       const query = {};
       if (email) {
         query.email = email;
+        if (req.token_email !== email) {
+          return res.status(401).send({ message: "forbidden access" });
+        }
       }
+
+      const cursor = issueCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.get("/issues", async (req, res) => {
+      const { category, status } = req.query;
+      const query = {};
+
       if (category && category !== "all") {
         query.category = category;
       }
@@ -141,7 +155,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/issues/:id",verifyFirebaseToken, async (req, res) => {
+    app.delete("/issues/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await issueCollection.deleteOne(query);
@@ -188,5 +202,5 @@ async function run() {
 run().catch(console.dir);
 
 app.listen(port, () => {
-  console.log(`Smart server is running on port: ${port}`);
+  console.log(`Server is running on port: ${port}`);
 });
