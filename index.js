@@ -57,11 +57,19 @@ async function run() {
     });
 
     app.get("/issues", async (req, res) => {
-      const email = req.query.email;
+      const { email, category, status } = req.query;
       const query = {};
       if (email) {
         query.email = email;
       }
+      if (category && category !== 'all') {
+        query.category = category;
+      }
+      if (status && status !== 'all') {
+        query.status = status;
+      }
+
+      console.log(query)
 
       const cursor = issueCollection.find(query);
       const result = await cursor.toArray();
@@ -94,7 +102,10 @@ async function run() {
         email: 1,
       };
 
-      const cursor = issueCollection.find(query).project(projectFields);
+      const cursor = issueCollection
+        .find(query)
+        .project(projectFields)
+        .limit(6);
       const result = await cursor.toArray();
       res.send(result);
     });
@@ -123,6 +134,17 @@ async function run() {
     app.get("/contributions/:id", async (req, res) => {
       const id = req.params.id;
       const query = { issueId: id };
+      const cursor = contributionCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.get("/contributions", async (req, res) => {
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        query.email = email;
+      }
       const cursor = contributionCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
