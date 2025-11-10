@@ -2,12 +2,38 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const admin = require("firebase-admin");
+const serviceAccount = require("./a10-community-issue-report-firebase-adminsdk.json");
 const app = express();
 const port = process.env.PORT || 3000;
 
 // middleware
 app.use(cors());
 app.use(express.json());
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+const verifyFirebaseToken = async (req, res, next) => {
+  const authorization = req.headers.authorization;
+
+  if (!authorization) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  const token = authorization.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    req.token_email = decoded.email;
+    next();
+  } catch {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+};
 
 const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@communitycleanliness.k81hyem.mongodb.net/?appName=CommunityCleanliness`;
 
@@ -50,7 +76,7 @@ async function run() {
     });
 
     //issue related APIs
-    app.post("/issues", async (req, res) => {
+    app.post("/issues", verifyFirebaseToken, async (req, res) => {
       const newIssue = req.body;
       const result = await issueCollection.insertOne(newIssue);
       res.send(result);
@@ -62,21 +88,19 @@ async function run() {
       if (email) {
         query.email = email;
       }
-      if (category && category !== 'all') {
+      if (category && category !== "all") {
         query.category = category;
       }
-      if (status && status !== 'all') {
+      if (status && status !== "all") {
         query.status = status;
       }
-
-      console.log(query)
 
       const cursor = issueCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
     });
 
-    app.patch("/issues/:id", async (req, res) => {
+    app.patch("/issues/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const updatedIssue = req.body;
       const query = { _id: new ObjectId(id) };
@@ -117,7 +141,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/issues/:id", async (req, res) => {
+    app.delete("/issues/:id",verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await issueCollection.deleteOne(query);
@@ -125,7 +149,7 @@ async function run() {
     });
 
     //contribution related APIs
-    app.post("/contributions", async (req, res) => {
+    app.post("/contributions", verifyFirebaseToken, async (req, res) => {
       const newContribution = req.body;
       const result = await contributionCollection.insertOne(newContribution);
       res.send(result);
@@ -139,11 +163,14 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/contributions", async (req, res) => {
+    app.get("/contributions", verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
       const query = {};
       if (email) {
         query.email = email;
+        if (req.token_email !== email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
       }
       const cursor = contributionCollection.find(query);
       const result = await cursor.toArray();
