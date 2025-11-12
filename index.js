@@ -145,11 +145,13 @@ async function run() {
         image: 1,
         email: 1,
       };
+      const sortFields = { _id: -1 };
 
       const cursor = issueCollection
         .find(query)
         .project(projectFields)
-        .limit(6);
+        .limit(6)
+        .sort(sortFields);
       const result = await cursor.toArray();
       res.send(result);
     });
