@@ -120,6 +120,7 @@ async function run() {
       res.send(result);
     });
 
+    
     app.patch("/issues/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const updatedIssue = req.body;
